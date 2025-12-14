@@ -1,114 +1,190 @@
-NOTE: You must add your card to use vercel ai sdk
+# AI SDK Registration Chatbot Setup Guide
 
-Create .env file and 
+## Prerequisites
 
-Go to neon : create new project "name"
+**Important:** You must add your credit card to use Vercel AI SDK.
 
-Then Connect to your database, copy link to project .env
+## Initial Setup
 
-Then Install pnpm : npm install -g npm
+### 1. Database Setup (Neon)
 
-use pnpm to install packages in project
+1. Go to [Neon](https://neon.tech)
+2. Create a new project with your desired name
+3. Connect to your database and copy the connection string
+4. Create a `.env` file in your project root and add:
+```env
+   DATABASE_URL="your_neon_connection_string_here"
+```
 
-Go to https://ai-sdk.dev/ then Click on AI Gateway link then Get an API Key - Get started and Sign in with Vercel already have account
+### 2. Package Manager Setup
 
+Install pnpm globally:
+```bash
+npm install -g pnpm
+```
 
+### 3. Install Dependencies
+```bash
 pnpm add ai @ai-sdk/react zod
-
 pnpm dlx shadcn@latest add @ai-elements/all
-
-Paste code from https://ai-sdk.dev/elements/examples/chatbot = app/page.tsx
-
-Paste code from https://ai-sdk.dev/elements/examples/chatbot = app/api/chat/route.ts
-
-Copy code from https://ai-sdk.dev/docs/introduction and Paste code : model: "anthropic/claude-sonnet-4.5", = 
-
-Copy code from https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling and 
-Paste code : 
 ```
-tools: {
-    weather: tool({
-      description: 'Get the weather in a location',
-      inputSchema: z.object({
-        location: z.string().describe('The location to get the weather for'),
-      }),
-      execute: async ({ location }) => ({
-        location,
-        temperature: 72 + Math.floor(Math.random() * 21) - 10,
-      }),
-    }),
-  },
+
+### 4. Get AI Gateway API Key
+
+1. Go to [ai-sdk.dev](https://ai-sdk.dev/)
+2. Click on **AI Gateway** link
+3. Click **Get an API Key** → **Get started**
+4. Sign in with your Vercel account
+5. Copy your API key and add it to `.env`:
+```env
+   AI_GATEWAY_API_KEY="your_api_key_here"
 ```
-== app/api/chat/route.ts
 
-Inital prompt: You are a helpful assistant that can answer questions and help with tasks
+## Project Configuration
 
-Register user prompt: You are a helpful assistant, Zig that helps users to register them in the Database, welcome the user with a greeting and Ask the user to Provide you
+### 1. Create Chat Interface
+
+**File:** `app/page.tsx`
+
+Copy the chatbot example code from: [AI SDK Elements - Chatbot Example](https://ai-sdk.dev/elements/examples/chatbot)
+
+### 2. Create API Route
+
+**File:** `app/api/chat/route.ts`
+
+1. Copy the base code from: [AI SDK Elements - Chatbot Example](https://ai-sdk.dev/elements/examples/chatbot)
+
+2. Update the model from [AI SDK Introduction](https://ai-sdk.dev/docs/introduction):
+```typescript
+   model: "anthropic/claude-sonnet-4.5"
+```
+
+3. Replace the tools section with the registration tool from [AI SDK Tools Documentation](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling):
+```typescript
+   tools: {
+     registerUser: tool({
+       description: 'Get the User Information and Creates a user in the system',
+       inputSchema: z.object({
+         name: z.string().describe("The user fullname"),
+         phone: z.string().describe("The user phone number"),
+         email: z.string().describe("The user email"),
+       }),
+       execute: async ({ name, phone, email }) => {
+         // Check if user exists
+         let user = await db.user.findUnique({
+           where: {
+             email: email,
+           },
+         });
+
+         // Create the user if they don't exist
+         if (!user) {
+           user = await db.user.create({
+             data: {
+               email, 
+               name, 
+               phone
+             },
+           });
+         }
+
+         return {
+           message: "Your account has been created successfully",
+           userId: user.id,
+           email: user.email,
+           phone: user.phone
+         }
+       },
+     }),
+   }
+```
+
+### 3. System Prompts
+
+**Initial Prompt (Basic):**
+```
+You are a helpful assistant that can answer questions and help with tasks.
+```
+
+**Registration Prompt (Recommended):**
+```
+You are a helpful assistant named Zig that helps users register in the Database. 
+
+Welcome the user with a greeting and ask them to provide:
 - Email Address
 - Phone Number
 - Full Name
-Only Proceed to call the Register User tool only if you have all data.
-- Speak to the User in a warm welcoming tone and always be respectful
 
-Change to this :
-```
-tools: {
-    registerUser: tool({
-      description: 'Get the User Information and Creates a user in the system',
-      inputSchema: z.object({
-        name: z.string().describe("The user fullname"),
-        phone: z.string().describe("The user phone number"),
-        email: z.string().describe("The user email"),
-      }),
-      execute: async ({ name, phone, email }) => {
-        // user exists
-        let user = await db.user.findUnique({
-          where: {
-            email: email,
-          },
-        });
+Only proceed to call the Register User tool when you have collected all required information.
 
-        // create the user
-        if(!user) {
-          user = await db.user.create({
-            data: {
-              email, name, phone
-            },
-          });
-        }
-
-        return {
-          message: "Your account has been created successfully",
-          userId: user.id,
-          email: user.email,
-          phone: user.phone
-        }
-      },
-    }),
-  },
+Speak to the user in a warm, welcoming tone and always be respectful.
 ```
 
-Change schema.prisma:
+## Database Schema
 
+### 1. Update Prisma Schema
+
+**File:** `prisma/schema.prisma`
+```prisma
 model User {
   id        String   @id @default(cuid())
-  name     String
-  email      String   @unique
-  phone      String   
+  name      String
+  email     String   @unique
+  phone     String   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+```
 
-Run code: 
-
+### 2. Run Migrations
+```bash
 npx prisma migrate dev --name init
-
 npx prisma generate
+```
 
+## UI Enhancement (Optional)
 
-Create a registration success card in v0.app:
+### Create Success Card
 
-prompt: i want to create a card that i will display to a user a successful ServiceWorkerRegistration, the card should have a success message, user id, name, email and phone , make it clean and sleek and small
+Use [v0.dev](https://v0.dev) to generate a registration success card:
 
+**Prompt:**
+```
+I want to create a card to display a successful user registration. 
+The card should show:
+- Success message
+- User ID
+- Name
+- Email
+- Phone
 
-Starter prompt: Hello, I want to register
+Make it clean, sleek, and compact.
+```
+
+## Testing
+
+To test the registration flow, start with:
+```
+Hello, I want to register
+```
+
+The assistant will guide you through the registration process.
+
+## Environment Variables Summary
+
+Your `.env` file should contain:
+```env
+DATABASE_URL="your_neon_connection_string"
+AI_GATEWAY_API_KEY="your_ai_gateway_key"
+```
+
+## Troubleshooting
+
+- Ensure all dependencies are installed with `pnpm install`
+- Verify your database connection string is correct
+- Check that Prisma migrations ran successfully
+- Confirm your AI Gateway API key is valid
+
+---
+
+**Need Help?** Contact: [marioagbanobi@gmail.com](mailto:marioagbanobi@gmail.com)
