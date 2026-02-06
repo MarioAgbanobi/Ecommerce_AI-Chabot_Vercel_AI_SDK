@@ -50,6 +50,7 @@ import {
 import { Loader } from "@/components/ai-elements/loader";
 import { RegistrationSuccessCard } from "@/components/registerSuccessResponseCard";
 import { RegistrationErrorCard } from "@/components/registerErrorResponseCard";
+import { WelcomeScreen } from "@/components/ai-elements/WelcomeScreen";
 const models = [
   {
     name: "GPT 4o",
@@ -85,7 +86,7 @@ const ChatBotDemo = () => {
           model: model,
           webSearch: webSearch,
         },
-      }
+      },
     );
     setInput("");
   };
@@ -94,110 +95,115 @@ const ChatBotDemo = () => {
       <div className="flex flex-col h-full">
         <Conversation className="h-full">
           <ConversationContent>
-            {messages.map((message) => (
-              <div key={message.id}>
-                {message.role === "assistant" &&
-                  message.parts.filter((part) => part.type === "source-url")
-                    .length > 0 && (
-                    <Sources>
-                      <SourcesTrigger
-                        count={
-                          message.parts.filter(
-                            (part) => part.type === "source-url"
-                          ).length
-                        }
-                      />
-                      {message.parts
-                        .filter((part) => part.type === "source-url")
-                        .map((part, i) => (
-                          <SourcesContent key={`${message.id}-${i}`}>
-                            <Source
-                              key={`${message.id}-${i}`}
-                              href={part.url}
-                              title={part.url}
-                            />
-                          </SourcesContent>
-                        ))}
-                    </Sources>
-                  )}
-                {message.parts.map((part, i) => {
-                  switch (part.type) {
-                    case "text":
-                      return (
-                        <Message key={`${message.id}-${i}`} from={message.role}>
-                          <MessageContent>
-                            <MessageResponse>{part.text}</MessageResponse>
-                          </MessageContent>
-                          {message.role === "assistant" &&
-                            i === messages.length - 1 && (
-                              <MessageActions>
-                                <MessageAction
-                                  onClick={() => regenerate()}
-                                  label="Retry"
-                                >
-                                  <RefreshCcwIcon className="size-3" />
-                                </MessageAction>
-                                <MessageAction
-                                  onClick={() =>
-                                    navigator.clipboard.writeText(part.text)
-                                  }
-                                  label="Copy"
-                                >
-                                  <CopyIcon className="size-3" />
-                                </MessageAction>
-                              </MessageActions>
-                            )}
-                        </Message>
-                      );
-                    case "reasoning":
-                      return (
-                        <Reasoning
-                          key={`${message.id}-${i}`}
-                          className="w-full"
-                          isStreaming={
-                            status === "streaming" &&
-                            i === message.parts.length - 1 &&
-                            message.id === messages.at(-1)?.id
+            {messages.length === 0 ? (
+              <WelcomeScreen />
+            ) : (
+              messages.map((message) => (
+                <div key={message.id}>
+                  {message.role === "assistant" &&
+                    message.parts.filter((part) => part.type === "source-url")
+                      .length > 0 && (
+                      <Sources>
+                        <SourcesTrigger
+                          count={
+                            message.parts.filter(
+                              (part) => part.type === "source-url",
+                            ).length
                           }
-                        >
-                          <ReasoningTrigger />
-                          <ReasoningContent>{part.text}</ReasoningContent>
-                        </Reasoning>
-                      );
-                    case "tool-registerUser":
-                      switch (part.state) {
-                        case "input-available":
-                          return (
-                            <Message
-                              key={`${part.toolCallId}-${i}`}
-                              from={message.role}
-                            >
-                              <MessageContent>
-                                <MessageResponse>
-                                  Registering user...
-                                </MessageResponse>
-                              </MessageContent>
-                            </Message>
-                          );
-                        case "output-available":
-                          return (
-                            <RegistrationSuccessCard 
-                            data={part.output as any}
-                            />
-                          );
-                        case "output-error":
-                          return (
-                            <RegistrationErrorCard />
-                          );
-                        default:
-                          return null;
-                      }
-                    default:
-                      return null;
-                  }
-                })}
-              </div>
-            ))}
+                        />
+                        {message.parts
+                          .filter((part) => part.type === "source-url")
+                          .map((part, i) => (
+                            <SourcesContent key={`${message.id}-${i}`}>
+                              <Source
+                                key={`${message.id}-${i}`}
+                                href={part.url}
+                                title={part.url}
+                              />
+                            </SourcesContent>
+                          ))}
+                      </Sources>
+                    )}
+                  {message.parts.map((part, i) => {
+                    switch (part.type) {
+                      case "text":
+                        return (
+                          <Message
+                            key={`${message.id}-${i}`}
+                            from={message.role}
+                          >
+                            <MessageContent>
+                              <MessageResponse>{part.text}</MessageResponse>
+                            </MessageContent>
+                            {message.role === "assistant" &&
+                              i === messages.length - 1 && (
+                                <MessageActions>
+                                  <MessageAction
+                                    onClick={() => regenerate()}
+                                    label="Retry"
+                                  >
+                                    <RefreshCcwIcon className="size-3" />
+                                  </MessageAction>
+                                  <MessageAction
+                                    onClick={() =>
+                                      navigator.clipboard.writeText(part.text)
+                                    }
+                                    label="Copy"
+                                  >
+                                    <CopyIcon className="size-3" />
+                                  </MessageAction>
+                                </MessageActions>
+                              )}
+                          </Message>
+                        );
+                      case "reasoning":
+                        return (
+                          <Reasoning
+                            key={`${message.id}-${i}`}
+                            className="w-full"
+                            isStreaming={
+                              status === "streaming" &&
+                              i === message.parts.length - 1 &&
+                              message.id === messages.at(-1)?.id
+                            }
+                          >
+                            <ReasoningTrigger />
+                            <ReasoningContent>{part.text}</ReasoningContent>
+                          </Reasoning>
+                        );
+                      case "tool-registerUser":
+                        switch (part.state) {
+                          case "input-available":
+                            return (
+                              <Message
+                                key={`${part.toolCallId}-${i}`}
+                                from={message.role}
+                              >
+                                <MessageContent>
+                                  <MessageResponse>
+                                    Registering user...
+                                  </MessageResponse>
+                                </MessageContent>
+                              </Message>
+                            );
+                          case "output-available":
+                            return (
+                              <RegistrationSuccessCard
+                                data={part.output as any}
+                              />
+                            );
+                          case "output-error":
+                            return <RegistrationErrorCard />;
+                          default:
+                            return null;
+                        }
+                      default:
+                        return null;
+                    }
+                  })}
+                </div>
+              ))
+            )}
             {status === "submitted" && <Loader />}
           </ConversationContent>
           <ConversationScrollButton />
